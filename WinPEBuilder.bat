@@ -67,21 +67,33 @@ Dism /image:%winpe_root%\mount /Add-Package /PackagePath:"%adk_path%\Windows Pre
 REM Adding drivers
 Dism /image:%winpe_root%\mount /Add-Driver /driver:%drivers_path% /recurse
 
-Rem Remove  winpe background permisions to be alegible for replacement.
+REM Remove  winpe background permisions to be eligible for replacement.
 TAKEOWN /F %winpe_root%\mount\Windows\System32\winpe.jpg
 ICACLS %winpe_root%\mount\Windows\System32\winpe.jpg /grant administrators:F
 
 REM Copying script to the WinPE root directory
 xcopy %scripts_path%  %winpe_root%\mount\Windows\System32 /r /s /e /i /y
 
-REM Set region Lenguage 
+REM Set region Language
 Dism /Set-AllIntl:en-US /Image:%winpe_root%\mount
 
+REM Set Keyboard Azerty (FR)
+Dism /Set-InputLocale:040c:0000040c /Image:%winpe_root%\mount
+
 REM Setting the timezone. List of available timezones can be found here: http://technet.microsoft.com/en-US/library/cc749073(v=ws.10).aspx
-Dism /image:%winpe_root%\mount /Set-TimeZone:"Eastern Standard Time"
- 
+Dism /image:%winpe_root%\mount /Set-TimeZone:"Romance Standard Time"
+
+REM Cleanup image file.
+Dism /Image:%winpe_root%\mount /Cleanup-Image /StartComponentCleanup /ResetBase
+
 REM Unmounting and commit changes
 Dism /Unmount-Wim /MountDir:%winpe_root%\mount\ /Commit
 
+REM Compression image file maximum.
+Dism /Export-Image /SourceImageFile:%winpe_root%\media\sources\boot.wim /SourceIndex:1 /DestinationImageFile:%winpe_root%\media\sources\min_boot.wim /Compress:Max
+
+REM Overwrite boot.wim with min_boot.wim
+MOVE /Y %winpe_root%\media\sources\min_boot.wim %winpe_root%\media\sources\boot.wim
+
 REM Creating ISO image from WinPE 
-Makewinpemedia /iso /f %winpe_root% %ISO_Path%\WinPE_X64.iso && PAUSE
+oscdimg -n -b%winpe_root%\bootbins\etfsboot.com %winpe_root%\media %ISO_Path%\WinPE_X64.iso && PAUSE
